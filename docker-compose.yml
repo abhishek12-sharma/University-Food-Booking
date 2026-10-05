@@ -1,0 +1,114 @@
+version: '3.9'
+
+services:
+
+  # ─── MySQL Database ─────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: university_food_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: university_food_system
+      MYSQL_USER: foodapp
+      MYSQL_PASSWORD: foodapppassword
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'foodapp', '-pfoodapppassword']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── Node.js Backend ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend:
+      dockerfile: Dockerfile
+    container_name: university_food_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ml:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: university_food_system
+      DB_USER: foodapp
+      DB_PASSWORD: foodapppassword
+      DB_LOGGING: 'false'
+      JWT_SECRET: change_me_in_production_use_long_random_string
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:5173
+      PICKUP_WINDOW_MINUTES: 15
+      ORDER_EXPIRY_SWEEP_INTERVAL_MS: 60000
+      ML_SERVICE_URL: http://ml:8000
+      ML_INTERNAL_API_KEY: change-me
+      # Set these to real Razorpay credentials for payment to work
+      RAZORPAY_KEY_ID: ''
+      RAZORPAY_KEY_SECRET: ''
+      RAZORPAY_WEBHOOK_SECRET: ''
+    ports:
+      - '5000:5000'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # ─── Python ML Service ──────────────────────────────────────────────────────
+  ml:
+    build:
+      context: ./ml-service:
+      dockerfile: Dockerfile
+    container_name: university_food_ml
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ML_HOST: 0.0.0.0
+      ML_PORT: 8000
+      INTERNAL_API_KEY: change-me
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: foodapp
+      DB_PASSWORD: foodapppassword
+      DB_NAME: university_food_system
+      MODEL_DIR: /app/model
+      MODEL_FILENAME: demand_model.joblib
+      MIN_TRAINING_ROWS: 200
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./ml-service:/app
+      - ml_models:/app/model
+
+  # ─── React Frontend (dev) ───────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend:
+      dockerfile: Dockerfile
+    container_name: university_food_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: http://localhost:5000/api
+      VITE_SOCKET_URL: http://localhost:5000
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  mysql_data:
+  ml_models:

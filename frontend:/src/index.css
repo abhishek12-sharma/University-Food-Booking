@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-canteen-bg text-canteen-ink font-body;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-canteen-ink;
+  }
+
+  :focus-visible {
+    outline: 2px solid #1f4b3f;
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-card bg-canteen-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-canteen-primaryLight disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-card border border-canteen-border bg-white px-5 py-2.5 text-sm font-semibold text-canteen-ink transition-colors hover:border-canteen-primary disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-card bg-canteen-warn px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#a3392a] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-canteen-border bg-white px-3.5 py-2.5 text-sm text-canteen-ink placeholder:text-canteen-muted focus:border-canteen-primary focus:outline-none;
+  }
+
+  .card {
+    @apply rounded-card border border-canteen-border bg-canteen-surface shadow-card;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-chip px-3 py-1 text-xs font-semibold;
+  }
+}
