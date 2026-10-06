@@ -33,9 +33,17 @@ export default function FoodWaste() {
         getFoodWasteRecords(),
         getWasteAnalytics()
       ]);
-      if (itemsRes.status === 'fulfilled') setItems(itemsRes.value.data || []);
-      if (recordsRes.status === 'fulfilled') setRecords(recordsRes.value.data || []);
-      if (analyticsRes.status === 'fulfilled') setAnalytics(analyticsRes.value.data || null);
+      if (itemsRes.status === 'fulfilled') {
+        const val = itemsRes.value?.data ?? itemsRes.value;
+        setItems(Array.isArray(val) ? val : (val?.foodItems ?? []));
+      }
+      if (recordsRes.status === 'fulfilled') {
+        const val = recordsRes.value?.data ?? recordsRes.value;
+        setRecords(Array.isArray(val) ? val : (val?.wasteRecords ?? val?.records ?? []));
+      }
+      if (analyticsRes.status === 'fulfilled') {
+        setAnalytics(analyticsRes.value?.data ?? analyticsRes.value ?? null);
+      }
       if (recordsRes.status === 'rejected') throw recordsRes.reason;
     } catch (err) {
       setError(err.message);

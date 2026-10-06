@@ -37,9 +37,12 @@ export default function Inventory() {
         getInventoryForFoodCourt(foodCourtId),
         getShopkeeperOrders().catch(() => ({ data: [] }))
       ]);
-      const nextItems = itemsRes.data || [];
+      const itemsVal = itemsRes?.data ?? itemsRes;
+      const nextItems = Array.isArray(itemsVal) ? itemsVal : (itemsVal?.foodItems ?? []);
+      const ordersVal = ordersRes?.data ?? ordersRes;
+      const orderList = Array.isArray(ordersVal) ? ordersVal : (ordersVal?.orders ?? []);
       setItems(nextItems);
-      setSoldByItemId(computeSoldToday(ordersRes.data || [], nextItems));
+      setSoldByItemId(computeSoldToday(orderList, nextItems));
     } catch (err) {
       setError(err.message);
     } finally {

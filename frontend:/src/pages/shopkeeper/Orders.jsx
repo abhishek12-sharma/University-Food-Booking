@@ -21,7 +21,8 @@ export default function Orders() {
     setError(null);
     try {
       const res = await getShopkeeperOrders();
-      setOrders(res.data || []);
+      const val = res?.data ?? res;
+      setOrders(Array.isArray(val) ? val : (val?.orders ?? []));
     } catch (err) {
       setError(err.message);
     } finally {

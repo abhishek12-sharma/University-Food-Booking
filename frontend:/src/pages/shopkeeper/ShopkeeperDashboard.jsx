@@ -54,11 +54,24 @@ export default function ShopkeeperDashboard() {
         getWasteAnalytics()
       ]);
 
-      if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value.data || []);
-      if (overviewRes.status === 'fulfilled') setOverview(overviewRes.value.data || null);
-      if (popularRes.status === 'fulfilled') setPopularFood(popularRes.value.data || []);
-      if (inventoryRes.status === 'fulfilled') setInventory(inventoryRes.value.data || []);
-      if (wasteRes.status === 'fulfilled') setWaste(wasteRes.value.data || null);
+      if (ordersRes.status === 'fulfilled') {
+        const val = ordersRes.value?.data ?? ordersRes.value;
+        setOrders(Array.isArray(val) ? val : (val?.orders ?? []));
+      }
+      if (overviewRes.status === 'fulfilled') {
+        setOverview(overviewRes.value?.data ?? overviewRes.value ?? null);
+      }
+      if (popularRes.status === 'fulfilled') {
+        const val = popularRes.value?.data ?? popularRes.value;
+        setPopularFood(Array.isArray(val) ? val : (val?.popularFood ?? []));
+      }
+      if (inventoryRes.status === 'fulfilled') {
+        const val = inventoryRes.value?.data ?? inventoryRes.value;
+        setInventory(Array.isArray(val) ? val : (val?.foodItems ?? []));
+      }
+      if (wasteRes.status === 'fulfilled') {
+        setWaste(wasteRes.value?.data ?? wasteRes.value ?? null);
+      }
 
       if (ordersRes.status === 'rejected') throw ordersRes.reason;
     } catch (err) {

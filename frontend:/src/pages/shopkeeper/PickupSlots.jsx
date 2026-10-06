@@ -21,7 +21,8 @@ export default function PickupSlots() {
     setError(null);
     try {
       const res = await getFoodCourtPickupSlots(foodCourtId);
-      setSlots(res.data || []);
+      const val = res?.data ?? res;
+      setSlots(Array.isArray(val) ? val : (val?.slots ?? val?.pickupSlots ?? []));
     } catch (err) {
       setError(err.message);
     } finally {

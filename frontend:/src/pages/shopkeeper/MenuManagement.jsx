@@ -16,7 +16,8 @@ export default function MenuManagement() {
     setError(null);
     try {
       const res = await getFoodCourtItems(foodCourtId);
-      setItems(res.data || []);
+      const val = res?.data ?? res;
+      setItems(Array.isArray(val) ? val : (val?.foodItems ?? []));
     } catch (err) {
       setError(err.message);
     } finally {

@@ -35,6 +35,10 @@
 }
 
 @layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-card px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-card bg-canteen-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-canteen-primaryLight disabled:cursor-not-allowed disabled:opacity-50;
   }

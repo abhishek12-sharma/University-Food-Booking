@@ -47,12 +47,24 @@ export default function Analytics() {
         getShopkeeperPickupDemand(),
         getWasteAnalytics()
       ]);
-      if (ov.status === 'fulfilled') setOverview(ov.value.data || null);
-      if (ord.status === 'fulfilled') setOrderSeries(ord.value.data || []);
-      if (rev.status === 'fulfilled') setRevenueSeries(rev.value.data || []);
-      if (pop.status === 'fulfilled') setPopularFood(pop.value.data || []);
-      if (demand.status === 'fulfilled') setPickupDemand(demand.value.data || []);
-      if (wst.status === 'fulfilled') setWaste(wst.value.data || null);
+      if (ov.status === 'fulfilled') setOverview(ov.value?.data ?? ov.value ?? null);
+      if (ord.status === 'fulfilled') {
+        const val = ord.value?.data ?? ord.value;
+        setOrderSeries(Array.isArray(val) ? val : (val?.series ?? []));
+      }
+      if (rev.status === 'fulfilled') {
+        const val = rev.value?.data ?? rev.value;
+        setRevenueSeries(Array.isArray(val) ? val : (val?.series ?? []));
+      }
+      if (pop.status === 'fulfilled') {
+        const val = pop.value?.data ?? pop.value;
+        setPopularFood(Array.isArray(val) ? val : (val?.popularFood ?? []));
+      }
+      if (demand.status === 'fulfilled') {
+        const val = demand.value?.data ?? demand.value;
+        setPickupDemand(Array.isArray(val) ? val : (val?.series ?? []));
+      }
+      if (wst.status === 'fulfilled') setWaste(wst.value?.data ?? wst.value ?? null);
       if ([ov, ord, rev, pop, demand, wst].every((r) => r.status === 'rejected')) {
         throw ov.reason;
       }
