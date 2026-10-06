@@ -32,7 +32,10 @@ export default function Shopkeepers() {
     setLoading(true);
     setError(null);
     getShopkeepers()
-      .then((res) => setShopkeepers(res?.data ?? []))
+      .then((res) => {
+        const raw = res?.data ?? res;
+        setShopkeepers(Array.isArray(raw) ? raw : (raw?.shopkeepers ?? []));
+      })
       .catch((err) => setError(err?.message || "Failed to load shopkeepers."))
       .finally(() => setLoading(false));
   };

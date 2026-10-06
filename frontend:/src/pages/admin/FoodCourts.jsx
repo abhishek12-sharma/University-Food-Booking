@@ -33,7 +33,10 @@ export default function FoodCourts() {
   const load = () => {
     setLoading(true);
     getAdminFoodCourts()
-      .then((res) => setCourts(res?.data ?? []))
+      .then((res) => {
+        const raw = res?.data ?? res;
+        setCourts(Array.isArray(raw) ? raw : (raw?.foodCourts ?? []));
+      })
       .catch((err) => setError(err?.message || "Failed to load food courts."))
       .finally(() => setLoading(false));
   };

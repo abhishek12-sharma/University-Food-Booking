@@ -33,7 +33,11 @@ export default function Orders() {
   useEffect(() => {
     let cancelled = false;
     getAdminOrders()
-      .then((res) => !cancelled && setOrders(res?.data ?? []))
+      .then((res) => {
+        const raw = res?.data ?? res;
+        const list = Array.isArray(raw) ? raw : (raw?.orders ?? []);
+        if (!cancelled) setOrders(list);
+      })
       .catch((err) => !cancelled && setError(err?.message || "Failed to load orders."))
       .finally(() => !cancelled && setLoading(false));
     return () => {

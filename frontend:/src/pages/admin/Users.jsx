@@ -32,7 +32,9 @@ export default function Users() {
     setError(null);
     getUsers()
       .then((res) => {
-        if (!cancelled) setUsers(res?.data ?? []);
+        const raw = res?.data ?? res;
+        const list = Array.isArray(raw) ? raw : (raw?.users ?? []);
+        if (!cancelled) setUsers(list);
       })
       .catch((err) => {
         if (!cancelled) setError(err?.message || "Failed to load users.");

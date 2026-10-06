@@ -24,7 +24,10 @@ export default function AuditLogs() {
   useEffect(() => {
     let cancelled = false;
     getAuditLogs()
-      .then((res) => !cancelled && setLogs(res?.data ?? []))
+      .then((res) => {
+        const raw = res?.data ?? res;
+        if (!cancelled) setLogs(Array.isArray(raw) ? raw : (raw?.logs ?? []));
+      })
       .catch((err) => {
         if (cancelled) return;
         if (err?.message?.includes("404") || err?.status === 404) {
