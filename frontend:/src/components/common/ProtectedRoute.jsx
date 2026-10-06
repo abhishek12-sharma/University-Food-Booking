@@ -12,7 +12,7 @@ import Loader from './Loader';
  * the user panel rather than shown it.
  */
 export default function ProtectedRoute({ children }) {
-  const { status, isAuthenticated, isUser } = useAuth();
+  const { status, isAuthenticated, isUser, user } = useAuth();
   const location = useLocation();
 
   if (status === 'loading') {
@@ -24,6 +24,12 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!isUser) {
+    if (user?.role === 'ADMIN') {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+    if (user?.role === 'SHOPKEEPER') {
+      return <Navigate to="/shopkeeper/dashboard" replace />;
+    }
     return <Navigate to="/login" replace state={{ wrongRole: true }} />;
   }
 

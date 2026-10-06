@@ -21,12 +21,12 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      const res = await login(form);
+      const loggedUser = await login(form);
       toast.success('Welcome back!');
-      const user = res.data?.user || res.data || res;
-      if (user?.role === 'ADMIN') {
+      const role = loggedUser?.role;
+      if (role === 'ADMIN') {
         navigate('/admin/dashboard', { replace: true });
-      } else if (user?.role === 'SHOPKEEPER') {
+      } else if (role === 'SHOPKEEPER') {
         navigate('/shopkeeper/dashboard', { replace: true });
       } else {
         const redirectTo = location.state?.from?.pathname || '/dashboard';

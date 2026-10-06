@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
     setUser(userData);
     setStatus('authenticated');
     connectSocket();
-    return res;
+    return userData;
   }, []);
 
   const register = useCallback((payload) => authApi.register(payload), []);
