@@ -21,10 +21,17 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      await login(form);
+      const res = await login(form);
       toast.success('Welcome back!');
-      const redirectTo = location.state?.from?.pathname || '/dashboard';
-      navigate(redirectTo, { replace: true });
+      const user = res.data?.user || res.data || res;
+      if (user?.role === 'ADMIN') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (user?.role === 'SHOPKEEPER') {
+        navigate('/shopkeeper/dashboard', { replace: true });
+      } else {
+        const redirectTo = location.state?.from?.pathname || '/dashboard';
+        navigate(redirectTo, { replace: true });
+      }
     } catch (err) {
       setError(err.message || 'Could not sign in. Check your details and try again.');
     } finally {

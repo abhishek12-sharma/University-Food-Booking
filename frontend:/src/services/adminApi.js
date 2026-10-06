@@ -16,12 +16,10 @@ export const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Attach the JWT on every request. Assumes the token is persisted by the
-// auth module (Member 1) under this key. If the auth module uses a
-// different storage key or an AuthContext, update this interceptor —
-// do not duplicate auth/token logic elsewhere.
+import { TOKEN_STORAGE_KEY } from "../utils/api";
+
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
