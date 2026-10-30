@@ -10,7 +10,7 @@ import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import EmptyState from '../../components/common/EmptyState';
 import { toast } from '../../components/common/Toast';
-
+import { getFoodCourtImage } from '../../utils/images';
 export default function FoodCourtDetails() {
   const { foodCourtId } = useParams();
   const navigate = useNavigate();
@@ -66,16 +66,32 @@ export default function FoodCourtDetails() {
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!foodCourt) return <EmptyState title="Food court not found" />;
 
+  const bannerImg = foodCourt.image_url || getFoodCourtImage(foodCourt.name);
+
   return (
     <div className="space-y-5">
-      <div>
-        <button type="button" onClick={() => navigate('/food-courts')} className="text-sm font-semibold text-canteen-muted hover:text-canteen-ink">
-          ← All food courts
-        </button>
-        <h1 className="mt-2 font-display text-2xl font-extrabold">{foodCourt.name}</h1>
-        <p className="mt-1 text-sm text-canteen-muted">
-          {foodCourt.location} {foodCourt.opening_time && `· ${foodCourt.opening_time}–${foodCourt.closing_time}`}
-        </p>
+      {/* Banner image */}
+      <div className="relative -mx-4 h-48 overflow-hidden rounded-xl sm:-mx-6 sm:h-56">
+        <img
+          src={bannerImg}
+          alt={foodCourt.name}
+          className="h-full w-full object-cover"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 p-5">
+          <button
+            type="button"
+            onClick={() => navigate('/food-courts')}
+            className="mb-2 text-xs font-semibold text-white/80 hover:text-white"
+          >
+            ← All food courts
+          </button>
+          <h1 className="font-display text-2xl font-extrabold text-white">{foodCourt.name}</h1>
+          <p className="mt-0.5 text-sm text-white/80">
+            {foodCourt.location} {foodCourt.opening_time && `· ${foodCourt.opening_time}–${foodCourt.closing_time}`}
+          </p>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

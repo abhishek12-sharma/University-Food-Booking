@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import pickupApi from '../../services/pickupApi';
@@ -31,16 +31,46 @@ function loadRazorpayScript() {
   });
 }
 
+/**
+ * Convert a slot's date+time into a local-time millisecond timestamp.
+ * slot_date: 'YYYY-MM-DD', start_time: 'HH:mm:ss'
+ */
+function slotStartMs(slot) {
+  const dateStr =
+    typeof slot.slot_date === 'string'
+      ? slot.slot_date.slice(0, 10)
+      : new Date(slot.slot_date).toLocaleDateString('en-CA');
+  const timeStr = String(slot.start_time).slice(0, 8);
+  const [yr, mo, dy] = dateStr.split('-').map(Number);
+  const [hr, min, sec] = timeStr.split(':').map(Number);
+  return new Date(yr, mo - 1, dy, hr, min, sec || 0).getTime();
+}
+
+/** Pickup window is 15 min; a slot is still bookable until the window closes. */
+const PICKUP_WINDOW_MS = 15 * 60 * 1000;
+/** 1-min grace so the UI and backend agree on the cutoff. */
+const GRACE_MS = 60 * 1000;
+
+/** Filter allSlots to only those whose pickup deadline is still in the future. */
+function filterFutureSlots(allSlots) {
+  const now = Date.now();
+  return allSlots.filter((s) => slotStartMs(s) + PICKUP_WINDOW_MS > now - GRACE_MS);
+}
+
 export default function Checkout() {
   const { cart, subtotal, itemCount, clearCart } = useCart();
   const navigate = useNavigate();
 
+  // All slots returned by the API (today only, from backend)
+  const allSlotsRef = useRef([]);
+  // Slots currently visible (real-time filtered)
   const [slots, setSlots] = useState([]);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(true);
   const [error, setError] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
 
+  // ── Load slots from backend ──────────────────────────────────────────────
   useEffect(() => {
     if (!cart.foodCourtId) {
       navigate('/cart', { replace: true });
@@ -52,17 +82,56 @@ export default function Checkout() {
       setError('');
       try {
         const res = await pickupApi.getSlotsByFoodCourt(cart.foodCourtId);
-        setSlots(res.data?.pickupSlots || res.data || []);
+        // Backend returns { data: { pickupSlots: [...] } }
+        const raw = res?.data?.pickupSlots ?? res?.data ?? [];
+        const all = Array.isArray(raw) ? raw : [];
+
+        // Deduplicate by id (guard against DB duplication)
+        const seen = new Set();
+        const unique = all.filter((s) => {
+          if (seen.has(String(s.id))) return false;
+          seen.add(String(s.id));
+          return true;
+        });
+
+        // Sort chronologically by start_time (backend only returns today)
+        unique.sort((a, b) => slotStartMs(a) - slotStartMs(b));
+
+        allSlotsRef.current = unique;
+        // Apply real-time filter immediately
+        setSlots(filterFutureSlots(unique));
       } catch (err) {
         setError(err.message);
       } finally {
         setLoadingSlots(false);
       }
     };
+
     loadSlots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart.foodCourtId]);
 
+  // ── Real-time clock: re-filter every 30 s ────────────────────────────────
+  useEffect(() => {
+    const tick = () => {
+      const updated = filterFutureSlots(allSlotsRef.current);
+      setSlots(updated);
+      // If the selected slot has just passed, deselect it
+      setSelectedSlotId((prev) => {
+        if (prev == null) return prev;
+        const still = updated.some((s) => String(s.id) === String(prev));
+        if (!still) {
+          toast.error('Your selected slot has just passed. Please choose another.');
+        }
+        return still ? prev : null;
+      });
+    };
+
+    const interval = setInterval(tick, 30_000); // every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Place order ──────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
     if (!selectedSlotId) {
       toast.error('Please select a pickup slot');
@@ -74,10 +143,14 @@ export default function Checkout() {
       // 1. Create the order. The backend re-validates every item,
       // quantity, and price and returns the authoritative total
       // (DEVELOPMENT_RULES.md section 10).
+      // Send IDs as numbers — the validator accepts both but numbers are safest.
       const orderRes = await orderApi.create({
-        foodCourtId: cart.foodCourtId,
-        pickupSlotId: selectedSlotId,
-        items: cart.items.map((i) => ({ foodItemId: i.foodItemId, quantity: i.quantity })),
+        foodCourtId: Number(cart.foodCourtId),
+        pickupSlotId: Number(selectedSlotId),
+        items: cart.items.map((i) => ({
+          foodItemId: Number(i.foodItemId),
+          quantity: Number(i.quantity),
+        })),
       });
       const order = orderRes.data?.order || orderRes.data;
 
@@ -102,8 +175,7 @@ export default function Checkout() {
         handler: async (response) => {
           try {
             // 3. The backend, not this callback, decides whether the
-            // payment is genuinely valid (DEVELOPMENT_RULES.md
-            // section 11).
+            // payment is genuinely valid (DEVELOPMENT_RULES.md section 11).
             await paymentApi.verify({
               orderId: order.id,
               provider_order_id: response.razorpay_order_id,
@@ -114,7 +186,10 @@ export default function Checkout() {
             toast.success('Payment confirmed!');
             navigate(`/orders/${order.id}/confirmation`, { replace: true });
           } catch (err) {
-            toast.error(err.message || 'We could not verify your payment. Contact support with your order ID.');
+            toast.error(
+              err.message ||
+                'We could not verify your payment. Contact support with your order ID.'
+            );
           }
         },
         modal: {
@@ -131,6 +206,8 @@ export default function Checkout() {
   };
 
   if (!cart.foodCourtId) return null;
+
+  const noSlots = !loadingSlots && !error && slots.length === 0;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -156,15 +233,23 @@ export default function Checkout() {
 
         <section className="card p-5">
           <h2 className="font-display text-base font-bold">Pickup slot</h2>
-          <p className="mt-1 text-sm text-canteen-muted">Choose when you'll collect your order.</p>
+          <p className="mt-1 text-sm text-canteen-muted">
+            Choose a time to collect your order today.
+          </p>
           <div className="mt-4">
             {loadingSlots && <Loader label="Loading slots…" />}
             {!loadingSlots && error && <ErrorState message={error} />}
-            {!loadingSlots && !error && slots.length === 0 && (
-              <p className="text-sm text-canteen-muted">No pickup slots are available for this food court right now.</p>
+            {noSlots && (
+              <p className="rounded-lg bg-canteen-warnLight px-4 py-3 text-sm text-canteen-warn">
+                No more pickup slots available for today. Slots open daily from 10:30 AM.
+              </p>
             )}
             {!loadingSlots && !error && slots.length > 0 && (
-              <PickupSlotPicker slots={slots} selectedId={selectedSlotId} onSelect={setSelectedSlotId} />
+              <PickupSlotPicker
+                slots={slots}
+                selectedId={selectedSlotId}
+                onSelect={setSelectedSlotId}
+              />
             )}
           </div>
         </section>
@@ -172,10 +257,10 @@ export default function Checkout() {
         <section className="card border-canteen-accent/40 bg-canteen-accent/5 p-5">
           <h2 className="font-display text-sm font-bold text-canteen-accentDark">Pickup policy</h2>
           <p className="mt-2 text-sm text-canteen-ink/80">
-            You'll have a <strong>15-minute pickup window</strong> after your selected pickup time. Orders not
-            collected within that window automatically expire, and{' '}
-            <strong>no refund is issued after expiry</strong>, per project policy. Please make sure you can collect
-            your order on time.
+            You'll have a <strong>15-minute pickup window</strong> after your selected pickup time.
+            Orders not collected within that window automatically expire, and{' '}
+            <strong>no refund is issued after expiry</strong>, per project policy. Please make sure
+            you can collect your order on time.
           </p>
         </section>
       </div>
@@ -185,7 +270,7 @@ export default function Checkout() {
           subtotal={subtotal}
           itemCount={itemCount}
           ctaLabel={placingOrder ? 'Processing…' : 'Place order & pay'}
-          ctaDisabled={placingOrder || !selectedSlotId}
+          ctaDisabled={placingOrder || !selectedSlotId || noSlots}
           onCta={handlePlaceOrder}
           note="Prices are recalculated and verified by the server before payment."
         />
@@ -193,3 +278,4 @@ export default function Checkout() {
     </div>
   );
 }
+

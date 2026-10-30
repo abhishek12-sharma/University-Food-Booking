@@ -1,20 +1,32 @@
 const { body, param } = require('express-validator');
 
+// Helper: accepts a positive integer OR a string that represents one.
+// Sequelize serialises BIGINT primary keys as strings in JSON, so we must
+// accept both forms here to avoid spurious 422 validation failures.
+const isPosInt = (fieldChain) =>
+  fieldChain
+    .notEmpty().withMessage('must be present')
+    .bail()
+    .customSanitizer((v) => (typeof v === 'string' ? Number(v) : v))
+    .isInt({ min: 1 }).withMessage('must be a positive integer');
+
 const createOrderRules = [
-  body('foodCourtId').isInt({ min: 1 }).withMessage('foodCourtId must be a positive integer'),
-  body('pickupSlotId').isInt({ min: 1 }).withMessage('pickupSlotId must be a positive integer'),
+  isPosInt(body('foodCourtId')),
+  isPosInt(body('pickupSlotId')),
   body('items')
     .isArray({ min: 1 }).withMessage('items must be a non-empty array'),
-  body('items.*.foodItemId').isInt({ min: 1 }).withMessage('items[].foodItemId must be a positive integer'),
-  body('items.*.quantity').isInt({ min: 1 }).withMessage('items[].quantity must be a positive integer'),
+  isPosInt(body('items.*.foodItemId')),
+  isPosInt(body('items.*.quantity')),
   // Explicitly NOT accepting items.*.price or a top-level total: the
   // backend is authoritative for pricing (DEVELOPMENT_RULES.md section 10).
 ];
 
-const orderIdParamRule = [param('orderId').isInt({ min: 1 }).withMessage('orderId must be a positive integer')];
+const orderIdParamRule = [
+  isPosInt(param('orderId')),
+];
 
 const updateOrderStatusRules = [
-  param('orderId').isInt({ min: 1 }).withMessage('orderId must be a positive integer'),
+  isPosInt(param('orderId')),
   body('status')
     .exists().withMessage('status is required')
     .bail()

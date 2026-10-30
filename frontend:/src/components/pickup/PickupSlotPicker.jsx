@@ -1,3 +1,8 @@
+/** Format 'HH:mm:ss' → 'HH:mm' for display */
+function fmtTime(t) {
+  return String(t).slice(0, 5);
+}
+
 export default function PickupSlotPicker({ slots, selectedId, onSelect }) {
   if (!slots?.length) return null;
 
@@ -6,7 +11,7 @@ export default function PickupSlotPicker({ slots, selectedId, onSelect }) {
       {slots.map((slot) => {
         const full = slot.status === 'FULL' || slot.booked_count >= slot.capacity;
         const disabled = full || slot.status === 'INACTIVE';
-        const selected = selectedId === slot.id;
+        const selected = String(selectedId) === String(slot.id);
 
         return (
           <button
@@ -16,14 +21,14 @@ export default function PickupSlotPicker({ slots, selectedId, onSelect }) {
             onClick={() => onSelect(slot.id)}
             className={`rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
               selected
-                ? 'border-canteen-primary bg-canteen-okLight'
+                ? 'border-canteen-primary bg-canteen-okLight ring-1 ring-canteen-primary'
                 : disabled
                   ? 'cursor-not-allowed border-canteen-border bg-canteen-bg text-canteen-muted'
                   : 'border-canteen-border hover:border-canteen-primary'
             }`}
           >
             <p className="font-semibold">
-              {slot.start_time}–{slot.end_time}
+              {fmtTime(slot.start_time)}–{fmtTime(slot.end_time)}
             </p>
             <p className="text-xs text-canteen-muted">
               {disabled ? 'Full' : `${slot.capacity - slot.booked_count} spots left`}

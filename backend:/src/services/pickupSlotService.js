@@ -1,6 +1,16 @@
+const { Op } = require('sequelize');
 const { PickupSlot, FoodCourt } = require('../models');
 const AppError = require('../utils/AppError');
 const { assertShopkeeperOwnsFoodCourt } = require('../utils/authz');
+
+/** Returns today's date as 'YYYY-MM-DD' in local time (food court timezone). */
+function todayLocal() {
+  const now = new Date();
+  const yr = now.getFullYear();
+  const mo = String(now.getMonth() + 1).padStart(2, '0');
+  const dy = String(now.getDate()).padStart(2, '0');
+  return `${yr}-${mo}-${dy}`;
+}
 
 async function listPickupSlotsByFoodCourt(foodCourtId) {
   const foodCourt = await FoodCourt.findByPk(foodCourtId);
@@ -8,11 +18,14 @@ async function listPickupSlotsByFoodCourt(foodCourtId) {
     throw AppError.notFound('Food court not found');
   }
   return PickupSlot.findAll({
-    where: { food_court_id: foodCourtId, status: 'ACTIVE' },
-    order: [
-      ['slot_date', 'ASC'],
-      ['start_time', 'ASC'],
-    ],
+    where: {
+      food_court_id: foodCourtId,
+      status: 'ACTIVE',
+      // Only return TODAY's slots — past days are never bookable and
+      // future days are not yet open for ordering per operating rules.
+      slot_date: todayLocal(),
+    },
+    order: [['start_time', 'ASC']],
   });
 }
 

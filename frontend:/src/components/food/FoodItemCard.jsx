@@ -1,19 +1,39 @@
+import { useState } from 'react';
 import { formatCurrency } from '../../utils/formatters';
+import { getFoodItemImage } from '../../utils/images';
 
 export default function FoodItemCard({ item, onAdd, onViewDetails }) {
   const available = item.is_available && item.quantity_available > 0;
+  const imgSrc = getFoodItemImage(item);
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className="card flex flex-col overflow-hidden">
       <button
         type="button"
         onClick={() => onViewDetails?.(item)}
-        className="flex h-32 items-center justify-center bg-canteen-bg text-left"
+        className="relative h-36 overflow-hidden bg-canteen-bg text-left"
       >
-        {item.image_url ? (
-          <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+        {!imgError ? (
+          <img
+            src={imgSrc}
+            alt={item.name}
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+          />
         ) : (
-          <span className="font-display text-2xl font-bold text-canteen-border">{item.name?.[0] || '?'}</span>
+          <div className="flex h-full w-full items-center justify-center bg-canteen-bg">
+            <span className="font-display text-2xl font-bold text-canteen-border">
+              {item.name?.[0] || '?'}
+            </span>
+          </div>
+        )}
+        {!available && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+            <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-canteen-warn">
+              Sold out
+            </span>
+          </div>
         )}
       </button>
 

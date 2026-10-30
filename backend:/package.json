@@ -8,6 +8,7 @@
     "dev": "npx nodemon src/server.js",
     "migrate": "node src/scripts/migrate.js",
     "seed": "node src/scripts/seed.js",
+    "refresh-slots": "node src/scripts/refreshSlots.js",
     "smoke-test": "node src/scripts/smokeTest.js",
     "test": "node src/scripts/smokeTest.js"
   },

@@ -117,10 +117,27 @@ async function createOrder(authenticatedUserId, payload) {
 }
 
 function computePickupDeadline(slotDate, startTime) {
-  // slotDate: 'YYYY-MM-DD', startTime: 'HH:mm:ss'
-  const dateStr = typeof slotDate === 'string' ? slotDate : slotDate.toISOString().slice(0, 10);
-  const timeStr = String(startTime).slice(0, 8);
-  const base = new Date(`${dateStr}T${timeStr}`);
+  // slotDate: 'YYYY-MM-DD' string or Date object, startTime: 'HH:mm:ss'
+  // Safely extract YYYY-MM-DD: prefer string form to avoid UTC-vs-local issues
+  let dateStr;
+  if (typeof slotDate === 'string') {
+    // Already a string like '2026-10-28' — use as-is
+    dateStr = slotDate.slice(0, 10);
+  } else if (slotDate instanceof Date) {
+    // Sequelize DATEONLY gives a Date at midnight UTC; extract local date parts
+    // to match the calendar date the shopkeeper intended
+    const yr = slotDate.getFullYear();
+    const mo = String(slotDate.getMonth() + 1).padStart(2, '0');
+    const dy = String(slotDate.getDate()).padStart(2, '0');
+    dateStr = `${yr}-${mo}-${dy}`;
+  } else {
+    dateStr = String(slotDate).slice(0, 10);
+  }
+  const timeStr = String(startTime).slice(0, 8); // 'HH:mm:ss'
+  // Parse as LOCAL time (food court operates in server's local timezone)
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hour, minute, second] = timeStr.split(':').map(Number);
+  const base = new Date(year, month - 1, day, hour, minute, second || 0);
   return new Date(base.getTime() + PICKUP_WINDOW_MINUTES * 60 * 1000);
 }
 
