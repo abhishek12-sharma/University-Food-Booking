@@ -55,6 +55,12 @@ async function refreshSlots() {
   await sequelize.authenticate();
   console.log('DB connected. Refreshing pickup slots...\n');
 
+  // Bump any existing slots that still have the old capacity of 20
+  const [updatedCount] = await sequelize.query(
+    'UPDATE pickup_slots SET capacity = 100 WHERE capacity = 20'
+  );
+  console.log(`Updated ${updatedCount} existing slots from capacity 20 → 100\n`);
+
   const foodCourts = await FoodCourt.findAll({ where: { status: 'ACTIVE' } });
 
   let created = 0;
@@ -75,7 +81,7 @@ async function refreshSlots() {
             slot_date: slotDate,
             start_time: t.start,
             end_time: t.end,
-            capacity: 20,
+            capacity: 100,
             booked_count: 0,
             status: 'ACTIVE',
           },

@@ -729,7 +729,7 @@ function generatePickupSlots(foodCourtId, today) {
     ];
 
     for (const t of times) {
-      slots.push({ food_court_id: foodCourtId, slot_date: slotDate, start_time: t.start, end_time: t.end, capacity: 20, booked_count: 0, status: 'ACTIVE' });
+      slots.push({ food_court_id: foodCourtId, slot_date: slotDate, start_time: t.start, end_time: t.end, capacity: 100, booked_count: 0, status: 'ACTIVE' });
     }
   }
   return slots;
